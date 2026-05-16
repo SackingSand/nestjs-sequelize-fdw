@@ -1,6 +1,6 @@
 {
   "name": "nestjs-sequelize-fdw",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Plug and Play sequelize model for Postgresql Foreign Data Wrapper (FDW)",
   "keywords": [
     "nestjs",
