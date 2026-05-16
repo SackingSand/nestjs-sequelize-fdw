@@ -34,11 +34,13 @@ import { FDWModel, FDWMetadata } from 'sequelize-fdw';
     dbPass: 'remote_password',
     dbPort: '5432',
   },
+  foreign_schema: 'remote_schema', // optional, defaults to 'public'
+  local_schema: 'fdw_local', // optional, defaults to model schema or 'public'
   log_level: 'error', // optional, defaults to 'error'
 })
 @Table({
   tableName: 'remote_users',
-  schema: 'public',
+  schema: 'fdw_local',
 })
 export class RemoteUser extends FDWModel<RemoteUser> {
   @Column(DataTypes.UUID)
@@ -120,10 +122,12 @@ import { FDWModel, FDWMetadata } from 'sequelize-fdw';
     dbPass: 'remote_password',
     dbPort: '5432',
   },
+  foreign_schema: 'remote_schema',
+  local_schema: 'fdw_local',
 })
 @Table({
   tableName: 'remote_posts',
-  schema: 'public',
+  schema: 'fdw_local',
 })
 export class RemotePost extends FDWModel<RemotePost> {
   @Column(DataTypes.UUID)
@@ -143,7 +147,7 @@ export class RemotePost extends FDWModel<RemotePost> {
 // Update RemoteUser to include the relationship
 @Table({
   tableName: 'remote_users',
-  schema: 'public',
+  schema: 'fdw_local',
 })
 export class RemoteUser extends FDWModel<RemoteUser> {
   @Column(DataTypes.UUID)
@@ -177,6 +181,8 @@ Decorate your model class with FDW configuration.
 ```typescript
 @FDWMetadata({
   server: FDWServer,
+  foreign_schema?: string,
+  local_schema?: string,
   log_level?: LogLevel,
 })
 ```
@@ -190,6 +196,9 @@ Decorate your model class with FDW configuration.
   - `dbUser`: Remote database user
   - `dbPass`: Remote database password
   - `dbPort`: Remote database port (string)
+- `foreign_schema` (optional): Remote schema that contains the source table (defaults to `"public"`)
+- `local_schema` (optional): Local PostgreSQL schema where the foreign table is created
+  - Defaults to the model `@Table({ schema })` value when present, otherwise `"public"`
 - `log_level` (optional): Logging level - `"error" | "warn" | "info" | "debug"` (defaults to `"error"`)
 
 ### FDWModel

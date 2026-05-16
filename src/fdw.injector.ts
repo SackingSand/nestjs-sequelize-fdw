@@ -137,16 +137,21 @@ export class FDWInjector {
 export class ForeignTableQueryBuilder {
 
   private fields: ForeignTableBuilderFields[] = []
-  private schema: string
+  private foreignSchema: string
+  private localSchema: string
   private tableName: string
   private server: string
-  private extension?: string
 
-  constructor(tableName: string, connection: string, extension?: string, schema: string = "public") {
+  constructor(
+    tableName: string,
+    connection: string,
+    foreignSchema: string = "public",
+    localSchema: string = "public"
+  ) {
     this.tableName = tableName
     this.server = connection
-    this.schema = schema
-    this.extension = extension
+    this.foreignSchema = foreignSchema
+    this.localSchema = localSchema
   }
 
   addField(field: ForeignTableBuilderFields) {
@@ -155,26 +160,28 @@ export class ForeignTableQueryBuilder {
   }
 
   build(): string {
-    const ftName = `public.${this.tableName}${this.extension? `_${this.extension}` : ''}`;
+    const ftName = this.tableName;
+    const localFtName = `${this.localSchema}.${ftName}`;
     return `
       DO $$ BEGIN
         IF EXISTS (
           SELECT 1 FROM information_schema.tables
-          WHERE table_schema = 'public'
-            AND table_name = '${this.tableName}${this.extension? `_${this.extension}` : ''}'
+          WHERE table_schema = '${this.localSchema}'
+            AND table_name = '${ftName}'
             AND table_type = 'BASE TABLE'
         ) THEN
-          EXECUTE 'DROP TABLE IF EXISTS ${ftName} CASCADE';
+          EXECUTE 'DROP TABLE IF EXISTS ${localFtName} CASCADE';
         END IF;
       END $$;
-      DROP FOREIGN TABLE IF EXISTS ${ftName};
-      CREATE FOREIGN TABLE ${ftName} (
+      CREATE SCHEMA IF NOT EXISTS ${this.localSchema};
+      DROP FOREIGN TABLE IF EXISTS ${localFtName};
+      CREATE FOREIGN TABLE ${localFtName} (
         ${this.fields.map((field) => {
       return `"${field.name}" ${field.type}`
     }).join(",\n")}
       )
       SERVER ${this.server}
-      OPTIONS (schema_name '${this.schema}', table_name '${this.tableName}');
+      OPTIONS (schema_name '${this.foreignSchema}', table_name '${this.tableName}');
     `
   }
 }

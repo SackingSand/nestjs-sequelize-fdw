@@ -14,4 +14,6 @@ export type FDWServer = {
 export type FDWDecorator = {
 	server: FDWServer;
 	log_level?: LogLevel;
+	foreign_schema?: string;
+	local_schema?: string;
 };

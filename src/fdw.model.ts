@@ -9,8 +9,11 @@ export class FDWModel<T extends {}> extends Model<T> {
   // ✅ Enhanced sync: auto-create enum types BEFORE FDW table
   static override sync(): Promise<any> {
     const attributes = this.getAttributes()
-    const { server, log_level }: FDWDecorator = Reflect.getMetadata("fdw:meta", this)
+    const { server, log_level, foreign_schema, local_schema }: FDWDecorator = Reflect.getMetadata("fdw:meta", this)
     const logger = createFdwLogger(this.name, log_level ?? "error")
+    const { tableName, schema: modelSchema } = getTableDetails(this.getTableName())
+    const targetForeignSchema = foreign_schema ?? "public"
+    const targetLocalSchema = local_schema ?? modelSchema ?? "public"
     
     if (!server) {
       logger.error(`Missing server Metadata for: ${super.getTableName()}`)
@@ -25,7 +28,12 @@ export class FDWModel<T extends {}> extends Model<T> {
 
     // ✅ Step 1: Collect ENUM types needed
     const enumTypesToCreate: { typeName: string; values: string[] }[] = []
-    const tableQuery = new ForeignTableQueryBuilder(super.getTableName().toString(), server.name)
+    const tableQuery = new ForeignTableQueryBuilder(
+      tableName,
+      server.name,
+      targetForeignSchema,
+      targetLocalSchema
+    )
 
     for (const [property, meta] of Object.entries(attributes)) {
 
@@ -34,7 +42,8 @@ export class FDWModel<T extends {}> extends Model<T> {
       const tsType = sequelizeTypeToTs(
         (meta as any).type,
         columnName,
-        super.getTableName().toString(),
+        tableName,
+        targetLocalSchema,
         enumTypesToCreate,
         logger
       );
@@ -119,6 +128,7 @@ function sequelizeTypeToTs(
   type: any, 
   columnName?: string, 
   tableName?: string,
+  enumSchema: string = "public",
   enumCollector?: { typeName: string; values: string[] }[], // Optional collector
   logger?: FdwLogger
 ): string | EnumTypeInfo {
@@ -141,7 +151,7 @@ function sequelizeTypeToTs(
     if (tableName && columnName) {
       // Convert camelCase to snake_case: paymentStatus → payment_status
       const snakeCaseCol = columnName.replace(/([A-Z])/g, '_$1').toLowerCase()
-      const schema = 'public'
+      const schema = enumSchema
       const typeName = `${schema}.enum_${tableName}_${snakeCaseCol}`
       
       return {
@@ -156,7 +166,7 @@ function sequelizeTypeToTs(
   }
 
   if (type instanceof DataTypes.ARRAY) {
-    const innerType = sequelizeTypeToTs((type as any).type, undefined, undefined)
+    const innerType = sequelizeTypeToTs((type as any).type, undefined, undefined, enumSchema)
     if (typeof innerType === 'string') {
       return `${innerType}[]`
     }
@@ -164,4 +174,21 @@ function sequelizeTypeToTs(
   }
 
   return 'text' // default fallback
+}
+
+function getTableDetails(tableRef: any): { tableName: string; schema?: string } {
+  if (typeof tableRef === "string") {
+    return { tableName: tableRef }
+  }
+
+  if (tableRef && typeof tableRef === "object") {
+    const tableName = tableRef.tableName ?? tableRef.table ?? tableRef.name
+    const schema = tableRef.schema
+
+    if (typeof tableName === "string") {
+      return { tableName, schema }
+    }
+  }
+
+  return { tableName: String(tableRef) }
 }
