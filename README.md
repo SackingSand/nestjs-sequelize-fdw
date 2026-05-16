@@ -76,6 +76,17 @@ import { RemoteUser } from './models/remote-user.model';
 export class DatabaseModule {}
 ```
 
+### Precaution: sync() is required
+
+This package depends on model `sync()` to initialize FDW extension/server/table objects.
+
+Choose one of these approaches:
+
+1. Enable `synchronize: true` in Sequelize config (recommended for development).
+2. Keep `synchronize: false` and call `await YourFdwModel.sync()` manually once during startup.
+
+If neither is done, FDW objects will not be created and your foreign-table queries can fail.
+
 ### 3. Use the Model
 
 ```typescript
@@ -196,20 +207,6 @@ Extend this class for your FDW models. Provides automatic FDW table creation via
 export class RemoteUser extends BaseFDWModel<RemoteUser> {
   // your columns...
 }
-```
-
-### Logging
-
-Import and create a logger for your own use:
-
-```typescript
-import { createFdwLogger } from 'nestjs-sequelize-fdw';
-
-const logger = createFdwLogger('MyModule', 'debug');
-logger.error('Error message');
-logger.warn('Warning message');
-logger.info('Info message');
-logger.debug('Debug message');
 ```
 
 ## Supported Column Types
