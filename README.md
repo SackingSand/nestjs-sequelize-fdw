@@ -262,7 +262,7 @@ Contributions are welcome! Please fork and submit a pull request.
 ## Author
 
 <a href="https://github.com/sackingsand">
-  <img src="https://github.com/sackingsand.png?size=72" width="72" height="72" alt="sackingsand" />
+  <img style="border-radius: 50%;" src="https://github.com/sackingsand.png?size=72" width="72" height="72" alt="sackingsand" />
 </a>
 
 **sackingsand** — [GitHub](https://github.com/sackingsand)
@@ -270,7 +270,7 @@ Contributions are welcome! Please fork and submit a pull request.
 ## Contributors
 
 <a href="https://github.com/Ikhraaazh">
-  <img src="https://github.com/Ikhraaazh.png?size=72" width="72" height="72" alt="Ikhraaazh" />
+  <img style="border-radius: 50%;" src="https://github.com/Ikhraaazh.png?size=72" width="72" height="72" alt="Ikhraaazh" />
 </a>
 
 - **Ikhraaazh** [GitHub](https://github.com/Ikhraaazh)
