@@ -2,14 +2,14 @@ import { DataTypes } from "sequelize";
 import { Model } from "sequelize-typescript";
 import { createFdwLogger, FdwLogger } from "./fdw.logger";
 import { FDWInjector, ForeignTableQueryBuilder } from "./fdw.injector";
-import { FFDWDecorator } from "./fdw.types";
+import { FDWDecorator } from "./fdw.types";
 
 export class FDWModel<T extends {}> extends Model<T> {
 
   // ✅ Enhanced sync: auto-create enum types BEFORE FDW table
   static override sync(): Promise<any> {
     const attributes = this.getAttributes()
-    const { server, log_level }: FFDWDecorator = Reflect.getMetadata("fdw:meta", this)
+    const { server, log_level }: FDWDecorator = Reflect.getMetadata("fdw:meta", this)
     const logger = createFdwLogger(this.name, log_level ?? "error")
     
     if (!server) {
@@ -104,7 +104,7 @@ export class FDWModel<T extends {}> extends Model<T> {
 
 }
 
-export function FDWMetadata({ server, log_level }: FFDWDecorator) {
+export function FDWMetadata({ server, log_level }: FDWDecorator) {
   return (target: Function) => Reflect.defineMetadata("fdw:meta", { server, log_level }, target)
 }
 

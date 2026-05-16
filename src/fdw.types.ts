@@ -11,7 +11,7 @@ export type FDWServer = {
 	dbPort: string;
 };
 
-export type FFDWDecorator = {
+export type FDWDecorator = {
 	server: FDWServer;
 	log_level?: LogLevel;
 };
