@@ -6,7 +6,7 @@ import { FDWDecorator } from "./fdw.types";
 
 export class FDWModel<T extends {}> extends Model<T> {
 
-  // ✅ Enhanced sync: auto-create enum types BEFORE FDW table
+  // Enhanced sync: auto-create enum types BEFORE FDW table
   static override sync(): Promise<any> {
     const attributes = this.getAttributes()
     const { server, log_level, foreign_schema, local_schema }: FDWDecorator = Reflect.getMetadata("fdw:meta", this)
@@ -26,7 +26,7 @@ export class FDWModel<T extends {}> extends Model<T> {
       return Promise.resolve(this)
     }
 
-    // ✅ Step 1: Collect ENUM types needed
+    // Step 1: Collect ENUM types needed
     const enumTypesToCreate: { typeName: string; values: string[] }[] = []
     const tableQuery = new ForeignTableQueryBuilder(
       tableName,
@@ -67,7 +67,7 @@ export class FDWModel<T extends {}> extends Model<T> {
       }
     }
 
-    // ✅ Step 2: Build safe enum creation statements (using DO block)
+    // Step 2: Build safe enum creation statements (using DO block)
     const enumCreationScripts = enumTypesToCreate.map(enumInfo => {
       const valuesStr = enumInfo.values.map(v => `'${v.replace(/'/g, "''")}'`).join(', ')
       return `
@@ -84,11 +84,12 @@ export class FDWModel<T extends {}> extends Model<T> {
         `
     }).join('\n')
 
-    // ✅ Step 3: Build FDW table creation
+    // Step 3: Build FDW table creation
     const fdwTableScript = tableQuery.build()
     // this.logger.debug(fdwTableScript)
-    // ✅ Step 4: Combine all scripts
-    const fullScript = `${enumCreationScripts}\n${fdwTableScript}`
+    // Step 4: Combine all scripts
+    const ensureSchemaScript = `CREATE SCHEMA IF NOT EXISTS ${targetLocalSchema};`
+    const fullScript = `${ensureSchemaScript}\n${enumCreationScripts}\n${fdwTableScript}`
 
     const injector = new FDWInjector(sequelize, log_level ?? "error")
     return injector.init_fdw()
@@ -117,7 +118,7 @@ export function FDWMetadata(metadata: FDWDecorator) {
   return (target: Function) => Reflect.defineMetadata("fdw:meta", metadata, target)
 }
 
-// ✅ Enhanced type converter that collects enum info
+// Enhanced type converter that collects enum info
 interface EnumTypeInfo {
   isEnum: true;
   values: string[];
@@ -140,11 +141,11 @@ function sequelizeTypeToTs(
   if (type instanceof DataTypes.DOUBLE) return 'double precision';
   if (type instanceof DataTypes.BOOLEAN) return 'boolean';
   if (type instanceof DataTypes.DATE) return 'timestamp';
-  if (type instanceof DataTypes.DATEONLY) return 'date'; // ✅ Fix: DATEONLY should be 'date', not 'timestamp'
+  if (type instanceof DataTypes.DATEONLY) return 'date'; // Fix: DATEONLY should be 'date', not 'timestamp'
   if (type instanceof DataTypes.JSON) return 'json';
   if (type instanceof DataTypes.JSONB) return 'jsonb';
 
-  // ✅ ENUM handling with proper type name generation
+  // ENUM handling with proper type name generation
   if (type instanceof DataTypes.ENUM) {
     const values = (type as any).values || []
     
