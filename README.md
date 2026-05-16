@@ -273,4 +273,4 @@ Contributions are welcome! Please fork and submit a pull request.
   <img src="https://github.com/Ikhraaazh.png?size=72" width="72" height="72" alt="Ikhraaazh" />
 </a>
 
-- **Ikhraaazh** — [GitHub](https://github.com/Ikhraaazh), ikhsanrafi06@gmail.com
+- **Ikhraaazh** [GitHub](https://github.com/Ikhraaazh)
