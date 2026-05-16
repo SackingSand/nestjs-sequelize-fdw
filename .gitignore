@@ -26,3 +26,6 @@ Thumbs.db
 
 # test coverage
 coverage/
+
+# npm pack artifacts
+*.tgz
