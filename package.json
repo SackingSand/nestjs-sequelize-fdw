@@ -1,6 +1,6 @@
 {
   "name": "sequelize-fdw",
-  "version": "1.0.3",
+  "version": "1.0.0",
   "description": "Plug and Play sequelize model for Postgresql Foreign Data Wrapper (FDW)",
   "keywords": [
     "sequelize",
