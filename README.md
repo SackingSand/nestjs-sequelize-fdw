@@ -23,7 +23,7 @@ npm install nestjs-sequelize-fdw sequelize sequelize-typescript
 ```typescript
 import { DataTypes } from 'sequelize';
 import { Column, Model, Table } from 'sequelize-typescript';
-import { BaseFDWModel, FDWMetadata } from 'nestjs-sequelize-fdw';
+import { FDWModel, FDWMetadata } from 'nestjs-sequelize-fdw';
 
 @FDWMetadata({
   server: {
@@ -40,7 +40,7 @@ import { BaseFDWModel, FDWMetadata } from 'nestjs-sequelize-fdw';
   tableName: 'remote_users',
   schema: 'public',
 })
-export class RemoteUser extends BaseFDWModel<RemoteUser> {
+export class RemoteUser extends FDWModel<RemoteUser> {
   @Column(DataTypes.UUID)
   id!: string;
 
@@ -116,7 +116,7 @@ You can define relationships between FDW models and other Sequelize models:
 
 ```typescript
 import { BelongsTo, ForeignKey, HasMany } from 'sequelize-typescript';
-import { BaseFDWModel, FDWMetadata } from 'nestjs-sequelize-fdw';
+import { FDWModel, FDWMetadata } from 'nestjs-sequelize-fdw';
 
 @FDWMetadata({
   server: {
@@ -132,7 +132,7 @@ import { BaseFDWModel, FDWMetadata } from 'nestjs-sequelize-fdw';
   tableName: 'remote_posts',
   schema: 'public',
 })
-export class RemotePost extends BaseFDWModel<RemotePost> {
+export class RemotePost extends FDWModel<RemotePost> {
   @Column(DataTypes.UUID)
   id!: string;
 
@@ -152,7 +152,7 @@ export class RemotePost extends BaseFDWModel<RemotePost> {
   tableName: 'remote_users',
   schema: 'public',
 })
-export class RemoteUser extends BaseFDWModel<RemoteUser> {
+export class RemoteUser extends FDWModel<RemoteUser> {
   @Column(DataTypes.UUID)
   id!: string;
 
@@ -199,12 +199,12 @@ Decorate your model class with FDW configuration.
   - `dbPort`: Remote database port (string)
 - `log_level` (optional): Logging level - `"error" | "warn" | "info" | "debug"` (defaults to `"error"`)
 
-### BaseFDWModel
+### FDWModel
 
 Extend this class for your FDW models. Provides automatic FDW table creation via the `sync()` method.
 
 ```typescript
-export class RemoteUser extends BaseFDWModel<RemoteUser> {
+export class RemoteUser extends FDWModel<RemoteUser> {
   // your columns...
 }
 ```
@@ -265,12 +265,9 @@ Contributions are welcome! Please fork and submit a pull request.
   <img style="border-radius: 50%;" src="https://github.com/sackingsand.png?size=72" width="72" height="72" alt="sackingsand" />
 </a>
 
-**sackingsand** — [GitHub](https://github.com/sackingsand)
-
 ## Contributors
 
 <a href="https://github.com/Ikhraaazh">
   <img style="border-radius: 50%;" src="https://github.com/Ikhraaazh.png?size=72" width="72" height="72" alt="Ikhraaazh" />
 </a>
 
-- **Ikhraaazh** [GitHub](https://github.com/Ikhraaazh)

@@ -4,7 +4,7 @@ import { createFdwLogger, FdwLogger } from "./fdw.logger";
 import { FDWInjector, ForeignTableQueryBuilder } from "./fdw.injector";
 import { FFDWDecorator } from "./fdw.types";
 
-export class BaseFDWModel<T extends {}> extends Model<T> {
+export class FDWModel<T extends {}> extends Model<T> {
 
   // ✅ Enhanced sync: auto-create enum types BEFORE FDW table
   static override sync(): Promise<any> {
