@@ -113,8 +113,8 @@ export class FDWModel<T extends {}> extends Model<T> {
 
 }
 
-export function FDWMetadata({ server, log_level }: FDWDecorator) {
-  return (target: Function) => Reflect.defineMetadata("fdw:meta", { server, log_level }, target)
+export function FDWMetadata(metadata: FDWDecorator) {
+  return (target: Function) => Reflect.defineMetadata("fdw:meta", metadata, target)
 }
 
 // ✅ Enhanced type converter that collects enum info
