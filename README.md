@@ -1,6 +1,6 @@
-# nestjs-sequelize-fdw
+# sequelize-fdw
 
-Plug and Play Sequelize model for PostgreSQL Foreign Data Wrapper (FDW). Seamlessly integrate FDW tables into your NestJS + Sequelize application with automatic enum type creation and concurrency-safe server initialization.
+Plug and Play Sequelize model for PostgreSQL Foreign Data Wrapper (FDW). Seamlessly integrate FDW tables into your Sequelize application with automatic enum type creation and concurrency-safe server initialization.
 
 ## Features
 
@@ -13,7 +13,7 @@ Plug and Play Sequelize model for PostgreSQL Foreign Data Wrapper (FDW). Seamles
 ## Installation
 
 ```bash
-npm install nestjs-sequelize-fdw sequelize sequelize-typescript
+npm install sequelize-fdw sequelize sequelize-typescript
 ```
 
 ## Quick Start
@@ -23,7 +23,7 @@ npm install nestjs-sequelize-fdw sequelize sequelize-typescript
 ```typescript
 import { DataTypes } from 'sequelize';
 import { Column, Model, Table } from 'sequelize-typescript';
-import { FDWModel, FDWMetadata } from 'nestjs-sequelize-fdw';
+import { FDWModel, FDWMetadata } from 'sequelize-fdw';
 
 @FDWMetadata({
   server: {
@@ -55,25 +55,22 @@ export class RemoteUser extends FDWModel<RemoteUser> {
 ### 2. Register with Sequelize
 
 ```typescript
-import { SequelizeModule } from '@nestjs/sequelize';
+import 'reflect-metadata';
+import { Sequelize } from 'sequelize-typescript';
 import { RemoteUser } from './models/remote-user.model';
 
-@Module({
-  imports: [
-    SequelizeModule.forRoot({
-      dialect: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: 'postgres',
-      password: 'password',
-      database: 'local_db',
-      models: [RemoteUser],
-      autoLoadModels: true,
-      synchronize: true,
-    }),
-  ],
+const sequelize = new Sequelize({
+  dialect: 'postgres',
+  host: 'localhost',
+  port: 5432,
+  username: 'postgres',
+  password: 'password',
+  database: 'local_db',
+  models: [RemoteUser],
 })
-export class DatabaseModule {}
+
+// Required once at startup: triggers FDW extension/server/table initialization
+await RemoteUser.sync();
 ```
 
 ### Precaution: sync() is required
@@ -82,32 +79,28 @@ This package depends on model `sync()` to initialize FDW extension/server/table 
 
 Choose one of these approaches:
 
-1. Enable `synchronize: true` in Sequelize config (recommended for development).
-2. Keep `synchronize: false` and call `await YourFdwModel.sync()` manually once during startup.
+1. Call `await sequelize.sync()` during startup.
+2. Or call `await YourFdwModel.sync()` manually once during startup.
 
 If neither is done, FDW objects will not be created and your foreign-table queries can fail.
 
 ### 3. Use the Model
 
 ```typescript
-import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/sequelize';
+import express from 'express';
 import { RemoteUser } from './models/remote-user.model';
 
-@Injectable()
-export class UserService {
-  constructor(
-    @InjectModel(RemoteUser) private remoteUserModel: typeof RemoteUser,
-  ) {}
+const app = express();
 
-  async getRemoteUsers() {
-    return this.remoteUserModel.findAll();
-  }
+app.get('/users', async (_req, res) => {
+  const users = await RemoteUser.findAll();
+  res.json(users);
+});
 
-  async getUserByEmail(email: string) {
-    return this.remoteUserModel.findOne({ where: { email } });
-  }
-}
+app.get('/users/:email', async (req, res) => {
+  const user = await RemoteUser.findOne({ where: { email: req.params.email } });
+  res.json(user);
+});
 ```
 
 ### 4. Define Model Relations
@@ -116,7 +109,7 @@ You can define relationships between FDW models and other Sequelize models:
 
 ```typescript
 import { BelongsTo, ForeignKey, HasMany } from 'sequelize-typescript';
-import { FDWModel, FDWMetadata } from 'nestjs-sequelize-fdw';
+import { FDWModel, FDWMetadata } from 'sequelize-fdw';
 
 @FDWMetadata({
   server: {
@@ -168,7 +161,7 @@ Now use relations in your service:
 
 ```typescript
 async getUserWithPosts(userId: string) {
-  return this.remoteUserModel.findOne({
+  return RemoteUser.findOne({
     where: { id: userId },
     include: [RemotePost],
   });

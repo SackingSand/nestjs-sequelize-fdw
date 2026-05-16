@@ -1,9 +1,9 @@
 {
-  "name": "nestjs-sequelize-fdw",
+  "name": "sequelize-fdw",
   "version": "1.0.3",
   "description": "Plug and Play sequelize model for Postgresql Foreign Data Wrapper (FDW)",
   "keywords": [
-    "nestjs",
+    "sequelize",
     "postgresql",
     "fdw"
   ],
@@ -15,7 +15,7 @@
   "type": "commonjs",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sackingsand/nestjs-sequelize-fdw.git"
+    "url": "https://github.com/sackingsand/sequelize-fdw.git"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
