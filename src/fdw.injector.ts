@@ -63,8 +63,8 @@ export class FDWInjector {
       const result = await initializePromise;
       sequelizeState.__fdwInitializedServers.add(server.name);
       return result
-    } catch (error) {
-      this.logger.error(error);
+    } catch (error: any) {
+      this.logger.error(error?.message || error);
       return null
     } finally {
       const sequelizeState = this.sequelize as SequelizeWithFdwState;

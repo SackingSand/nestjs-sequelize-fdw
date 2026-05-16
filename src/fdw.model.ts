@@ -101,8 +101,8 @@ export class FDWModel<T extends {}> extends Model<T> {
       .then(() => {
         return Promise.resolve(this)
       })
-      .catch((err) => {
-        logger.error(`Failed to create FDW table for ${super.getTableName()}:`, err)
+      .catch((err: any) => {
+        logger.error(`Failed to create FDW table for ${super.getTableName()}:`, err?.message || err)
         return Promise.resolve(this)
       })
   }
