@@ -1,20 +1,23 @@
 # sequelize-fdw
 
-Plug and Play Sequelize model for PostgreSQL Foreign Data Wrapper (FDW). Seamlessly integrate FDW tables into your Sequelize application with automatic enum type creation and concurrency-safe server initialization.
+Plug and Play Sequelize model for PostgreSQL Foreign Data Wrapper (FDW). Seamlessly integrate FDW tables into your Sequelize application with automatic enum type creation, robust SQL identifier/literal escaping, and concurrency-safe server initialization.
 
 ## Features
 
 - 🔌 **Plug & Play**: Decorator-based FDW table setup
 - 📦 **Auto Enum Handling**: Automatically creates PostgreSQL ENUM types before table creation
 - 🔒 **Concurrency Safe**: Prevents duplicate server initialization under concurrent model syncs
-- 📝 **Configurable Logging**: Level-aware logging (error, warn, info, debug) with info as default
+- 🛡️ **SQL Injection & Identifier Safe**: Fully escapes string literals and double-quotes identifiers
+- 📝 **Configurable Logging**: Level-aware logging (`error`, `warn`, `info`, `debug`) with `error` as default
 - 🛡️ **TypeScript First**: Full type safety for all APIs
 
 ## Installation
 
 ```bash
-npm install sequelize-fdw sequelize sequelize-typescript
+npm install sequelize-fdw sequelize sequelize-typescript reflect-metadata
 ```
+
+Ensure `reflect-metadata` is imported at your application entry point before any models are loaded.
 
 ## Quick Start
 
@@ -69,7 +72,7 @@ const sequelize = new Sequelize({
   password: 'password',
   database: 'local_db',
   models: [RemoteUser],
-})
+});
 
 // Required once at startup: triggers FDW extension/server/table initialization
 await RemoteUser.sync();
@@ -85,6 +88,54 @@ Choose one of these approaches:
 2. Or call `await YourFdwModel.sync()` manually once during startup.
 
 If neither is done, FDW objects will not be created and your foreign-table queries can fail.
+
+### Migration-Friendly SQL (No Runtime sync Dependency)
+
+If you manage schema through migration files, generate deterministic FDW SQL from your model and execute it via `queryInterface`.
+
+```typescript
+import { QueryInterface } from 'sequelize';
+import { RemoteUser } from '../models/remote-user.model';
+
+export async function up(queryInterface: QueryInterface): Promise<void> {
+  const upSql = RemoteUser.buildFdwUpSql({
+    includeInfrastructure: true, // extension + server + user mapping
+    strict: true,
+  });
+
+  for (const sql of upSql) {
+    await queryInterface.sequelize.query(sql, { transaction: null });
+  }
+}
+
+export async function down(queryInterface: QueryInterface): Promise<void> {
+  const downSql = RemoteUser.buildFdwDownSql({
+    dropEnumsOnDown: true,
+    dropSchemaOnDown: false,
+    strict: true,
+    // dropServerOnDown: true, // optional
+  });
+
+  for (const sql of downSql) {
+    await queryInterface.sequelize.query(sql, { transaction: null });
+  }
+}
+```
+
+Available options:
+- `includeInfrastructure`: includes `CREATE EXTENSION`, `CREATE SERVER`, and `CREATE USER MAPPING` SQL in up migration
+- `recreateServer`: when used with `includeInfrastructure`, emits server recreation SQL (`DROP SERVER ... CASCADE` + create)
+- `dropEnumsOnDown`: drops generated enum types on down migration
+- `dropSchemaOnDown`: drops local schema on down migration
+  - Safety guard: dropping schema `public` is blocked by default
+  - Use `allowUnsafeSchemaDrop: true` only if you intentionally want to drop `public`
+- `dropServerOnDown`: drops FDW server on down migration
+- `strict`: throws on invalid FDW metadata or guarded operations (recommended for migrations)
+- `allowUnsafeSchemaDrop`: bypasses the public schema guard when `dropSchemaOnDown` is true
+
+Migration templates:
+- sequelize-cli: `examples/migrations/sequelize-cli/fdw-model.migration.ts`
+- umzug: `examples/migrations/umzug/fdw-model.migration.ts`
 
 ### 3. Use the Model
 
@@ -156,19 +207,8 @@ export class RemoteUser extends FDWModel<RemoteUser> {
   @Column(DataTypes.STRING)
   email!: string;
 
-  @HasMany(() => RemotePost, 'authorId')
+  @HasMany(() => RemotePost, { foreignKey: 'authorId', constraints: false })
   posts?: RemotePost[];
-}
-```
-
-Now use relations in your service:
-
-```typescript
-async getUserWithPosts(userId: string) {
-  return RemoteUser.findOne({
-    where: { id: userId },
-    include: [RemotePost],
-  });
 }
 ```
 
@@ -215,61 +255,36 @@ export class RemoteUser extends FDWModel<RemoteUser> {
 
 The package automatically maps Sequelize types to PostgreSQL FDW types:
 
-| Sequelize | PostgreSQL |
-| --------- | ---------- |
+| Sequelize Type | PostgreSQL Type |
+| -------------- | --------------- |
 | `UUID` | `uuid` |
-| `STRING` | `text` |
-| `TEXT` | `text` |
+| `STRING` / `TEXT` | `text` |
+| `CHAR` / `CHAR(n)` | `char` / `char(n)` |
 | `INTEGER` | `integer` |
-| `DECIMAL` | `numeric(10,2)` |
+| `BIGINT` | `bigint` |
+| `SMALLINT` | `smallint` |
+| `FLOAT` / `REAL` | `real` / `double precision` |
 | `DOUBLE` | `double precision` |
+| `DECIMAL(p,s)` / `NUMERIC` | `numeric(p,s)` / `numeric` |
 | `BOOLEAN` | `boolean` |
 | `DATE` / `DATEONLY` | `timestamp` / `date` |
+| `TIME` | `time` |
 | `JSON` / `JSONB` | `json` / `jsonb` |
+| `BLOB` | `bytea` |
+| `INET` | `inet` |
+| `MACADDR` | `macaddr` |
+| `CITEXT` | `citext` |
 | `ENUM` | *(auto-created PostgreSQL ENUM type)* |
 | `ARRAY` | *(with element type suffix `[]`)* |
 
 ## Under the Hood
 
 1. **Enum Creation**: Before creating the FDW table, all ENUM columns trigger automatic PostgreSQL ENUM type creation.
-2. **Server Initialization**: FDW servers are created once per Sequelize instance, even with concurrent model syncs.
-3. **Deduplication**: Uses an in-memory Set + Promise map to prevent duplicate initialization.
-4. **Idempotent Sync**: Multiple calls to model.sync() are safe—servers and tables only create if missing.
-
-## Advanced: Custom Logging
-
-Pass a log level when using models:
-
-```typescript
-@FDWMetadata({
-  server: { /* ... */ },
-  log_level: 'debug', // verbose logging
-})
-```
-
-Available levels:
-- `error` - Only errors *(default)*
-- `warn` - Errors + warnings
-- `info` - Errors, warnings, info
-- `debug` - All messages
+2. **Identifier & Literal Escaping**: All identifiers are quoted (`"schema"."table"`) and string literals are safely escaped (`'safe''literal'`).
+3. **Server Initialization**: FDW servers are created once per Sequelize instance, even with concurrent model syncs.
+4. **Deduplication**: Uses an in-memory Set + Promise map to prevent duplicate initialization.
+5. **Idempotent Sync**: Multiple calls to `model.sync()` are safe—servers and tables only create if missing.
 
 ## License
 
 ISC
-
-## Contributing
-
-Contributions are welcome! Please fork and submit a pull request.
-
-## Author
-
-<a href="https://github.com/sackingsand">
-  <img style="border-radius: 50%;" src="https://github.com/sackingsand.png?size=72" width="72" height="72" alt="sackingsand" />
-</a>
-
-## Contributors
-
-<a href="https://github.com/Ikhraaazh">
-  <img style="border-radius: 50%;" src="https://github.com/Ikhraaazh.png?size=72" width="72" height="72" alt="Ikhraaazh" />
-</a>
-
